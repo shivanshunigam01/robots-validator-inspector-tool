@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,25 +14,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
-  Check, 
-  X, 
-  Download, 
-  Copy, 
-  TestTube, 
+import {
+  Check,
+  X,
+  Download,
+  Copy,
+  TestTube,
   Globe,
   Bot,
   FileText,
   AlertCircle,
-  Shield
+  Shield,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import RobotsEditor from "@/components/RobotsEditor";
@@ -58,44 +57,25 @@ const Index = () => {
         "Googlebot-Image",
         "Googlebot-News",
         "Googlebot-Video",
-        "Google-InspectionTool"
-      ]
+        "Google-InspectionTool",
+      ],
     },
     {
       label: "Bing Bots",
-      options: [
-        "Bingbot",
-        "BingPreview",
-        "msnbot"
-      ]
+      options: ["Bingbot", "BingPreview", "msnbot"],
     },
     {
       label: "SEO Tools",
-      options: [
-        "AhrefsBot",
-        "SemrushBot",
-        "MJ12bot",
-        "ScreamingFrogSEOSpider"
-      ]
+      options: ["AhrefsBot", "SemrushBot", "MJ12bot", "ScreamingFrogSEOSpider"],
     },
     {
       label: "Social Media Bots",
-      options: [
-        "Twitterbot",
-        "facebookexternalhit",
-        "LinkedInBot",
-        "WhatsApp"
-      ]
+      options: ["Twitterbot", "facebookexternalhit", "LinkedInBot", "WhatsApp"],
     },
     {
       label: "Other Bots",
-      options: [
-        "DuckDuckBot",
-        "Baiduspider",
-        "YandexBot",
-        "Slurp"
-      ]
-    }
+      options: ["DuckDuckBot", "Baiduspider", "YandexBot", "Slurp"],
+    },
   ];
 
   const mockRobotsContent = `User-agent: *
@@ -118,15 +98,15 @@ Sitemap: https://example.com/sitemap.xml`;
       type: "Document",
       result: "Allowed by Allow: /",
       host: "example.com",
-      allowed: true
+      allowed: true,
     },
     {
       url: "https://example.com/admin",
       status: "403 Forbidden",
-      type: "Document", 
+      type: "Document",
       result: "Blocked by Disallow: /admin",
       host: "example.com",
-      allowed: false
+      allowed: false,
     },
     {
       url: "https://example.com/public/page.html",
@@ -134,7 +114,7 @@ Sitemap: https://example.com/sitemap.xml`;
       type: "Document",
       result: "Allowed by Allow: /public/",
       host: "example.com",
-      allowed: true
+      allowed: true,
     },
     {
       url: "https://example.com/styles.css",
@@ -142,8 +122,8 @@ Sitemap: https://example.com/sitemap.xml`;
       type: "Stylesheet",
       result: "Allowed by Allow: /",
       host: "example.com",
-      allowed: true
-    }
+      allowed: true,
+    },
   ];
 
   const handleTest = async () => {
@@ -157,36 +137,73 @@ Sitemap: https://example.com/sitemap.xml`;
     }
 
     setIsLoading(true);
-    
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      if (mode === "live") {
-        setRobotsContent(mockRobotsContent);
+      const parsedUrl = new URL(url);
+      const robotsUrl = `${parsedUrl.origin}/robots.txt`;
+
+      const response = await fetch(robotsUrl);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch robots.txt file.");
       }
-      
-      setParsedRules([
-        { line: 1, rule: "User-agent: *", type: "user-agent", status: "info" },
-        { line: 2, rule: "Disallow: /admin", type: "disallow", status: "blocked" },
-        { line: 3, rule: "Disallow: /private/", type: "disallow", status: "blocked" },
-        { line: 4, rule: "Allow: /public/", type: "allow", status: "allowed" },
-        { line: 6, rule: "User-agent: Googlebot", type: "user-agent", status: "info" },
-        { line: 7, rule: "Allow: /", type: "allow", status: "allowed" },
+
+      const fetchedContent = await response.text();
+      setRobotsContent(fetchedContent);
+
+      // Parse rules (optional: improve this later with actual parser)
+      const lines = fetchedContent.split("\n");
+      const rules = lines.map((line, index) => {
+        const trimmed = line.trim();
+        let type = "info";
+        let status = "info";
+
+        if (trimmed.startsWith("User-agent")) {
+          type = "user-agent";
+        } else if (trimmed.startsWith("Disallow")) {
+          type = "disallow";
+          status = "blocked";
+        } else if (trimmed.startsWith("Allow")) {
+          type = "allow";
+          status = "allowed";
+        } else if (trimmed.startsWith("Sitemap")) {
+          type = "sitemap";
+        }
+
+        return {
+          line: index + 1,
+          rule: trimmed,
+          type,
+          status,
+        };
+      });
+
+      setParsedRules(rules);
+
+      setTestResults([
+        {
+          url: robotsUrl,
+          status: "200 OK",
+          type: "Document",
+          result: "robots.txt fetched successfully",
+          host: parsedUrl.hostname,
+          allowed: true,
+        },
       ]);
-      
-      setTestResults(mockTestResults);
-      
+
       toast({
         title: "Success",
-        description: "Robots.txt analysis completed!",
+        description: "robots.txt fetched and analyzed.",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to analyze robots.txt. Please try again.",
+        description: `Unable to fetch robots.txt — ${error.message}`,
         variant: "destructive",
       });
+      setRobotsContent("");
+      setParsedRules([]);
+      setTestResults([]);
     } finally {
       setIsLoading(false);
     }
@@ -199,17 +216,19 @@ Sitemap: https://example.com/sitemap.xml`;
       timestamp: new Date().toISOString(),
       robotsContent,
       parsedRules,
-      testResults
+      testResults,
     };
-    
-    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+
+    const blob = new Blob([JSON.stringify(results, null, 2)], {
+      type: "application/json",
+    });
     const url_download = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url_download;
     a.download = `robots-test-${Date.now()}.json`;
     a.click();
     window.URL.revokeObjectURL(url_download);
-    
+
     toast({
       title: "Downloaded",
       description: "Test results saved successfully!",
@@ -226,9 +245,9 @@ Robots.txt Content:
 ${robotsContent}
 
 Test Results:
-${testResults.map(result => 
-  `${result.url} - ${result.status} - ${result.result}`
-).join('\n')}`;
+${testResults
+  .map((result) => `${result.url} - ${result.status} - ${result.result}`)
+  .join("\n")}`;
 
     navigator.clipboard.writeText(output);
     toast({
@@ -238,21 +257,13 @@ ${testResults.map(result =>
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFF00] p-4">
+    <div className="min-h-screen bg-[#FFB100] p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-black mb-2 drop-shadow-lg flex items-center justify-center gap-3">
-            <Bot className="w-10 h-10" />
-            Robots.txt Validator & Testing Tool
-          </h1>
-          <p className="text-black/80 text-lg">
-            Test and validate your robots.txt file for search engine compliance
-          </p>
-        </div>
+        <div className="text-center mb-8"></div>
 
-        {/* Top Section: Input Fields */}
-        <Card className="bg-white shadow-xl rounded-2xl">
+        {/* Top Section */}
+        <Card className="backdrop-blur-lg bg-white/20 border-white/30 shadow-xl rounded-2xl">
           <CardHeader>
             <CardTitle className="text-black flex items-center gap-2">
               <Shield className="w-5 h-5" />
@@ -271,7 +282,7 @@ ${testResults.map(result =>
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com"
-                  className="bg-white border-gray-300 focus:border-yellow-400 transition-colors"
+                  className="bg-white/80 backdrop-blur border-white/50 placeholder:text-gray-500 focus:bg-white/90 transition-all duration-200"
                 />
               </div>
 
@@ -279,10 +290,10 @@ ${testResults.map(result =>
               <div className="xl:col-span-2 space-y-2">
                 <Label className="text-black font-medium">User Agent</Label>
                 <Select value={userAgent} onValueChange={setUserAgent}>
-                  <SelectTrigger className="bg-white border-gray-300 focus:border-yellow-400">
+                  <SelectTrigger className="bg-white/80 backdrop-blur border-white/50 focus:bg-white/90 transition-all duration-200">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white max-h-60">
+                  <SelectContent className="bg-white border-gray-200 max-h-60">
                     {userAgentGroups.map((group) => (
                       <SelectGroup key={group.label}>
                         <SelectLabel className="text-gray-600 font-medium">
@@ -299,49 +310,61 @@ ${testResults.map(result =>
                 </Select>
               </div>
 
-              {/* Mode Radio Buttons */}
+              {/* Mode */}
               <div className="space-y-2">
                 <Label className="text-black font-medium">Mode</Label>
                 <RadioGroup value={mode} onValueChange={setMode}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="live" id="live" />
-                    <Label htmlFor="live" className="text-black cursor-pointer">Live</Label>
+                    <Label htmlFor="live" className="text-black cursor-pointer">
+                      Live
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="editor" id="editor" />
-                    <Label htmlFor="editor" className="text-black cursor-pointer">Editor</Label>
+                    <Label
+                      htmlFor="editor"
+                      className="text-black cursor-pointer"
+                    >
+                      Editor
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
 
-              {/* Check Resources + Test Button */}
+              {/* Check Resources + Test */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="resources"
                     checked={checkResources}
-                    onCheckedChange={(checked) => setCheckResources(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCheckResources(checked === true)
+                    }
                     className="border-black data-[state=checked]:bg-black"
                   />
-                  <Label htmlFor="resources" className="text-black cursor-pointer">
+                  <Label
+                    htmlFor="resources"
+                    className="text-black cursor-pointer"
+                  >
                     Check Resources
                   </Label>
                 </div>
-                
+
                 <Button
                   onClick={handleTest}
                   disabled={isLoading}
-                  className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 px-6"
+                  className="w-full bg-black hover:bg-gray-900 text-white font-semibold shadow-lg transition-all duration-200"
                 >
                   {isLoading ? (
                     <>
-                      <TestTube className="w-4 h-4 mr-2 animate-spin" />
+                      <TestTube className="w-4 h-4 mr-2" />
                       TESTING...
                     </>
                   ) : (
                     <>
-                      <TestTube className="w-4 h-4 mr-2" />
-                      TEST
+                      {/* <TestTube className="w-4 h-4 mr-2" /> */}
+                      CHECK
                     </>
                   )}
                 </Button>
@@ -351,7 +374,7 @@ ${testResults.map(result =>
         </Card>
 
         {/* Editor Area */}
-        <Card className="bg-white shadow-xl rounded-2xl">
+        <Card className="backdrop-blur-lg bg-white/20 border-white/30 shadow-xl rounded-2xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-black flex items-center gap-2">
@@ -393,7 +416,7 @@ ${testResults.map(result =>
 
         {/* Results Table */}
         {testResults.length > 0 && (
-          <Card className="bg-white shadow-xl rounded-2xl">
+          <Card className="backdrop-blur-lg bg-white/20 border-white/30 shadow-xl rounded-2xl">
             <CardHeader>
               <CardTitle className="text-black flex items-center gap-2">
                 <Globe className="w-5 h-5" />
@@ -405,11 +428,21 @@ ${testResults.map(result =>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-black font-semibold">Resource URL</TableHead>
-                      <TableHead className="text-black font-semibold">Status</TableHead>
-                      <TableHead className="text-black font-semibold">Type</TableHead>
-                      <TableHead className="text-black font-semibold">Result</TableHead>
-                      <TableHead className="text-black font-semibold">Host</TableHead>
+                      <TableHead className="text-black font-semibold">
+                        Resource URL
+                      </TableHead>
+                      <TableHead className="text-black font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-black font-semibold">
+                        Type
+                      </TableHead>
+                      <TableHead className="text-black font-semibold">
+                        Result
+                      </TableHead>
+                      <TableHead className="text-black font-semibold">
+                        Host
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -419,11 +452,13 @@ ${testResults.map(result =>
                           {result.url}
                         </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            result.status.includes('200') 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              result.status.includes("200")
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {result.status}
                           </span>
                         </TableCell>
@@ -439,9 +474,13 @@ ${testResults.map(result =>
                             ) : (
                               <X className="w-4 h-4 text-red-600" />
                             )}
-                            <span className={`text-sm ${
-                              result.allowed ? 'text-green-700' : 'text-red-700'
-                            }`}>
+                            <span
+                              className={`text-sm ${
+                                result.allowed
+                                  ? "text-green-700"
+                                  : "text-red-700"
+                              }`}
+                            >
                               {result.result}
                             </span>
                           </div>
@@ -459,11 +498,7 @@ ${testResults.map(result =>
         )}
 
         {/* Footer */}
-        <div className="text-center py-6">
-          <p className="text-black/70">
-            Developed by <span className="font-semibold text-black">Lovable AI</span>
-          </p>
-        </div>
+        <div className="text-center py-6"></div>
       </div>
     </div>
   );
