@@ -142,7 +142,11 @@ Sitemap: https://example.com/sitemap.xml`;
       const parsedUrl = new URL(url);
       const robotsUrl = `${parsedUrl.origin}/robots.txt`;
 
-      const response = await fetch(robotsUrl);
+      // Use public CORS proxy to bypass CORS restrictions
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
+        robotsUrl
+      )}`;
+      const response = await fetch(proxyUrl);
 
       if (!response.ok) {
         throw new Error("Failed to fetch robots.txt file.");
@@ -151,32 +155,36 @@ Sitemap: https://example.com/sitemap.xml`;
       const fetchedContent = await response.text();
       setRobotsContent(fetchedContent);
 
-      // Parse rules (optional: improve this later with actual parser)
+      // Parse robots.txt lines into structured rules
       const lines = fetchedContent.split("\n");
-      const rules = lines.map((line, index) => {
-        const trimmed = line.trim();
-        let type = "info";
-        let status = "info";
+      const rules = lines
+        .map((line, index) => {
+          const trimmed = line.trim();
+          if (!trimmed) return null;
 
-        if (trimmed.startsWith("User-agent")) {
-          type = "user-agent";
-        } else if (trimmed.startsWith("Disallow")) {
-          type = "disallow";
-          status = "blocked";
-        } else if (trimmed.startsWith("Allow")) {
-          type = "allow";
-          status = "allowed";
-        } else if (trimmed.startsWith("Sitemap")) {
-          type = "sitemap";
-        }
+          let type = "info";
+          let status = "info";
 
-        return {
-          line: index + 1,
-          rule: trimmed,
-          type,
-          status,
-        };
-      });
+          if (trimmed.toLowerCase().startsWith("user-agent")) {
+            type = "user-agent";
+          } else if (trimmed.toLowerCase().startsWith("disallow")) {
+            type = "disallow";
+            status = "blocked";
+          } else if (trimmed.toLowerCase().startsWith("allow")) {
+            type = "allow";
+            status = "allowed";
+          } else if (trimmed.toLowerCase().startsWith("sitemap")) {
+            type = "sitemap";
+          }
+
+          return {
+            line: index + 1,
+            rule: trimmed,
+            type,
+            status,
+          };
+        })
+        .filter(Boolean); // remove empty/null lines
 
       setParsedRules(rules);
 
