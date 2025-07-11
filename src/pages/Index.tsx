@@ -120,18 +120,21 @@ const Index = () => {
     setParsedRules([]);
 
     try {
-      const response = await fetch("http://localhost:3000/validate-robots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          user_agent_token: userAgent,
-          user_agent_string: "",
-          live_test: mode === "live",
-          check_resources: checkResources,
-          robots_txt: robotsContent,
-        }),
-      });
+      const response = await fetch(
+        "https://llms-backend-1.onrender.com/validate-robots",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url,
+            user_agent_token: userAgent,
+            user_agent_string: "",
+            live_test: mode === "live",
+            check_resources: checkResources,
+            robots_txt: robotsContent,
+          }),
+        }
+      );
 
       const data = await response.json();
 
